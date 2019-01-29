@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: sra-fasterq-dump-workflow-
+spec:
+  entrypoint: sra-fasterq-dump
+  arguments:
+    parameters:
+      - name: srrid
+        value: SRR7460726  # SRR000001 is a working state
+  templates:
+    - name: sra-fasterq-dump
+      inputs:
+        parameters:
+          - name: srrid
+      steps:
+        - - name: fasterq-dump
+            template: fasterq-dump
+            arguments:
+              parameters:
+                - name: srrid
+                  value: "{{inputs.parameters.srrid}}"
+    - name: fasterq-dump
+      inputs:
+        parameters:
+          - name: srrid
+      script:
+        image: inutano/sra-toolkit:latest
+        command: [bash]
+        resources:
+          requests:
+            memory: 2G
+            cpu: 0.5
+        source: |
+          cd /
+          fasterq-dump {{inputs.parameters.srrid}}
+          du -sh "/{{inputs.parameters.srrid}}_1.fastq"
+          du -sh "/{{inputs.parameters.srrid}}_2.fastq"
+          df -h
+      outputs:
+        artifacts:
+          - name: fastq1
+            path: "/{{inputs.parameters.srrid}}_1.fastq"
+          - name: fastq2
+            path: "/{{inputs.parameters.srrid}}_2.fastq"
